@@ -1,7 +1,12 @@
-from src.utils.reminder_service import delete_all_reminders
+import logging
+from src.utils.reminder_service import ReminderServiceDelete
+from src.config.base import settings
 
-user_phone_number = "whatsapp:+79026212196"
-if delete_all_reminders(user_phone_number):
-    print(f"All reminders for {user_phone_number} have been deleted.")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+user_phone_number = settings.TWILIO_WHATSAPP_NUMBER
+if ReminderServiceDelete.delete_all_reminders(user_phone_number):
+    logger.info(f"All reminders for {user_phone_number} have been deleted.")
 else:
-    print(f"No reminders found for {user_phone_number}.")
+    logger.info(f"No reminders found for {user_phone_number}.")
