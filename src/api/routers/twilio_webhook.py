@@ -1,11 +1,14 @@
 from fastapi import APIRouter, Form
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 from src.utils.twilio_client import send_twilio_message
+from src.utils.redis_client import save_reminder
+from src.utils.reminder_service import schedule_reminder
 
 router = APIRouter()
 
+# Настройка логирования
 logging.basicConfig(level=logging.INFO)
 
 reminder_pattern = re.compile(r'remind me to (.+) at (.+)', re.IGNORECASE)
@@ -22,7 +25,12 @@ async def receive_message(From: str = Form(...), Body: str = Form(...)):
 
         try:
             reminder_time = datetime.strptime(reminder_time_str, '%Y-%m-%d %H:%M')
-            logging.info(f"Parsed reminder: {reminder_text} at {reminder_time}")
+            reminder_time_utc = reminder_time.replace(tzinfo=timezone.utc)
+            logging.info(f"Parsed reminder: {reminder_text} at {reminder_time_utc}")
+
+            save_reminder(From, reminder_text, reminder_time_utc)
+
+            schedule_reminder(From, f"Reminder: {reminder_text}", reminder_time_utc)
 
             response_message = f"Got it! I'll remind you to '{reminder_text}' at {reminder_time_str}."
             send_twilio_message(response_message, From)
