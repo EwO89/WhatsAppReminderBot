@@ -25,5 +25,4 @@ def send_reminder(to: str, message: str):
         raise e
 
 
-
 celery_app.autodiscover_tasks(['src.utils'], force=True)

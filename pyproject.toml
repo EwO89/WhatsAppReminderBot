@@ -15,6 +15,7 @@ celery = "^5.4.0"
 flake8 = "^7.0.0"
 twilio = "^9.1.1"
 flower = "^2.0.1"
+pytz = "^2024.1"
 
 
 [build-system]
