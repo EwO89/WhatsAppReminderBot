@@ -2,7 +2,7 @@ import re
 import logging
 from fastapi import APIRouter, Request
 from twilio.twiml.messaging_response import MessagingResponse
-from src.utils.reminder_service import schedule_reminder, get_reminders
+from src.utils.reminder_service import schedule_reminder, get_reminders, delete_reminder
 from src.utils.twilio_client import send_twilio_message
 
 router = APIRouter()
@@ -18,9 +18,11 @@ async def twilio_webhook(request: Request):
 
     reminder_regex = re.compile(r"remind me to (.+) at (\d{4}-\d{2}-\d{2} \d{2}:\d{2})(?: in (.+))?")
     list_regex = re.compile(r"list reminders", re.IGNORECASE)
+    delete_regex = re.compile(r"delete reminder at (\d{4}-\d{2}-\d{2} \d{2}:\d{2})", re.IGNORECASE)
 
     reminder_match = reminder_regex.match(body)
     list_match = list_regex.match(body)
+    delete_match = delete_regex.match(body)
 
     if reminder_match:
         reminder_text = reminder_match.group(1)
@@ -37,10 +39,15 @@ async def twilio_webhook(request: Request):
         else:
             response_message = "You have no reminders."
         send_twilio_message(response_message, from_number)
+    elif delete_match:
+        reminder_time_str = delete_match.group(1)
+        delete_reminder(from_number, reminder_time_str)
+        response_message = f"Reminder at {reminder_time_str} has been deleted."
+        send_twilio_message(response_message, from_number)
     else:
         response_message = (
-            "Sorry, I didn't understand that command. You can ask me to 'remind me to [task] at [YYYY-MM-DD HH:MM] in [Timezone]' "
-            "or 'list reminders'."
+            "Sorry, I didn't understand that command. You can ask me to 'remind me to [task] at [YYYY-MM-DD HH:MM] in [Timezone]', "
+            "'list reminders' or 'delete reminder at [YYYY-MM-DD HH:MM]'."
         )
         send_twilio_message(response_message, from_number)
 

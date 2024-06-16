@@ -71,3 +71,18 @@ def schedule_reminder(user: str, reminder: str, reminder_time_str: str, user_tz:
     send_reminder.apply_async((user, f"Reminder: {reminder}"), countdown=delay)
     logger.info(
         f"Scheduled reminder: {reminder} for user: {user} at time: {reminder_time_utc} with delay: {delay} seconds")
+
+
+def delete_reminder(user: str, reminder_time_str: str):
+    try:
+        reminder_time_local = datetime.strptime(reminder_time_str, '%Y-%m-%d %H:%M')
+        reminder_time_utc = reminder_time_local.astimezone(timezone.utc)
+        reminder_id = f"reminder:{user}:{reminder_time_utc.timestamp()}"
+
+        logger.info(f"Trying to delete reminder: {reminder_id}")
+
+        redis_client.delete(reminder_id)
+        redis_client.zrem("reminders", reminder_id)
+        logger.info(f"Deleted reminder for user: {user} at time: {reminder_time_utc}")
+    except Exception as e:
+        logger.error(f"Error deleting reminder: {e}")
