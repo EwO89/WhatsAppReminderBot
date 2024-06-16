@@ -8,3 +8,4 @@ htmlcov
 venv/
 .idea/
 .env
+app.log
