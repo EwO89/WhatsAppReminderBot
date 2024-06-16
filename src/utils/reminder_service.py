@@ -1,24 +1,40 @@
-from celery import Celery
-from twilio.rest import Client
-from src.config.base import settings
-import logging
+from datetime import datetime, timezone
+from src.utils.redis_client import redis_client
 
-celery_app = Celery('tasks', broker=settings.CELERY_BROKER_URL, backend=settings.CELERY_RESULT_BACKEND)
 
-client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+def save_reminder(user: str, reminder: str, reminder_time: datetime):
+    reminder_id = f"reminder:{user}:{reminder_time.timestamp()}"
+    redis_client.hmset(reminder_id, {"reminder": reminder, "time": reminder_time.isoformat()})
+    redis_client.zadd("reminders", {reminder_id: reminder_time.timestamp()})
 
-logging.basicConfig(level=logging.INFO)
 
-@celery_app.task(bind=True)
-def send_reminder(self, to: str, message: str):
-    logging.info(f"Task {self.request.id}: Sending reminder to {to}: {message}")
-    try:
-        client.messages.create(
-            body=message,
-            from_=settings.TWILIO_WHATSAPP_NUMBER,
-            to=to
-        )
-        logging.info(f"Task {self.request.id}: Reminder sent to {to}")
-    except Exception as e:
-        logging.error(f"Task {self.request.id}: Failed to send reminder to {to}: {e}")
-        self.retry(exc=e, countdown=60, max_retries=3)
+def get_reminders(user: str):
+    keys = redis_client.keys(f"reminder:{user}:*")
+    reminders = [redis_client.hgetall(key) for key in keys]
+
+    decoded_reminders = []
+    for reminder in reminders:
+        decoded_reminder = {k.decode('utf-8'): v.decode('utf-8') for k, v in reminder.items()}
+        decoded_reminders.append(decoded_reminder)
+
+    now = datetime.now(timezone.utc)
+
+    current_reminders = [reminder for reminder in decoded_reminders if
+                         'time' in reminder and datetime.fromisoformat(reminder['time']).astimezone(timezone.utc) > now]
+
+    reminder_texts = [f"{reminder['reminder']} at {reminder['time']}" for reminder in current_reminders if
+                      'reminder' in reminder and 'time' in reminder]
+
+    for reminder in decoded_reminders:
+        if 'reminder' not in reminder or 'time' not in reminder:
+            print(f"Missing keys in reminder: {reminder}")
+
+    return reminder_texts
+
+
+def schedule_reminder(user: str, reminder: str, reminder_time_str: str):
+    reminder_time = datetime.strptime(reminder_time_str, '%Y-%m-%d %H:%M').replace(tzinfo=timezone.utc)
+    save_reminder(user, reminder, reminder_time)
+    delay = (reminder_time - datetime.now(timezone.utc)).total_seconds()
+    from src.utils.celery_client import send_reminder
+    send_reminder.apply_async((user, f"Reminder: {reminder}"), countdown=delay)
