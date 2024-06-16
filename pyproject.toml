@@ -16,6 +16,9 @@ flake8 = "^7.0.0"
 twilio = "^9.1.1"
 flower = "^2.0.1"
 pytz = "^2024.1"
+pydantic-settings = "^2.3.3"
+pydantic = "^2.7.4"
+pytest-mock = "^3.14.0"
 
 
 [build-system]
