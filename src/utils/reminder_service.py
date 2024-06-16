@@ -93,18 +93,6 @@ def delete_reminder(user: str, reminder_id: str):
     return True
 
 
-def delete_all_reminders(user: str):
-    reminder_keys = redis_client.keys(f"reminder:{user}:*")
-    if not reminder_keys:
-        logger.warning(f"No reminders found for user: {user}")
-        return False
-    for reminder_key in reminder_keys:
-        redis_client.delete(reminder_key)
-        redis_client.zrem("reminders", reminder_key)
-        logger.info(f"Deleted reminder for user: {user} with key: {reminder_key}")
-    return True
-
-
 def delete_reminder_by_index(user: str, index: int):
     reminders = get_reminders(user)
     if index < 1 or index > len(reminders):
