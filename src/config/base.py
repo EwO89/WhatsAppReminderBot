@@ -1,28 +1,26 @@
-import os
-from dotenv import load_dotenv
+from pydantic_settings import BaseSettings
+from pathlib import Path
 
-load_dotenv()
-
-
-class BaseSettings:
-    def __init__(
-            self
-    ):
-        self.REDIS_HOST: str = os.getenv("REDIS_HOST")
-        self.REDIS_PORT: int = int(os.getenv("REDIS_PORT"))
-        self.CELERY_BROKER_URL: str = os.getenv("CELERY_BROKER_URL")
-        self.CELERY_RESULT_BACKEND: str = os.getenv("CELERY_RESULT_BACKEND")
-        self.TWILIO_ACCOUNT_SID: str = os.getenv("TWILIO_ACCOUNT_SID")
-        self.TWILIO_AUTH_TOKEN: str = os.getenv("TWILIO_AUTH_TOKEN")
-        self.TWILIO_PHONE_NUMBER: str = os.getenv("TWILIO_PHONE_NUMBER")
-        self.TWILIO_WHATSAPP_NUMBER: str = os.getenv("TWILIO_WHATSAPP_NUMBER")
+BASE_DIR = Path(__file__).absolute().parent.parent.parent
 
 
-class Settings(BaseSettings):
-    def __init__(
-            self
-    ):
-        super().__init__()
+class Settings(
+    BaseSettings
+):
+    REDIS_HOST: str
+    REDIS_PORT: int
+    CELERY_BROKER_URL: str
+    CELERY_RESULT_BACKEND: str
+    TWILIO_ACCOUNT_SID: str
+    TWILIO_AUTH_TOKEN: str
+    TWILIO_PHONE_NUMBER: str
+    TWILIO_WHATSAPP_NUMBER: str
+    PORT: int
+    HOST: str
+
+    class Config:
+        env_file = BASE_DIR / '.env'
+        extra = 'ignore'
 
 
 settings = Settings()

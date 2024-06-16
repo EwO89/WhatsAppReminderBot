@@ -11,7 +11,9 @@ logging.basicConfig(level=logging.INFO)
 
 
 @celery_app.task(name='src.utils.celery_client.send_reminder')
-def send_reminder(to: str, message: str):
+def send_reminder(to: str,
+                  message: str
+                  ):
     logging.info(f"Sending reminder to {to}: {message}")
     try:
         client.messages.create(

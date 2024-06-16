@@ -9,7 +9,9 @@ reminder_service_delete = ReminderServiceDelete()
 
 
 @router.post("/webhooks/twilio")
-async def twilio_webhook(request: Request):
+async def twilio_webhook(
+        request: Request
+):
     form = await request.form()
     from_number = form.get("From")
     body = form.get("Body").strip().lower()
