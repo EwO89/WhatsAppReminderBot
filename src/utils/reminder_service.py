@@ -39,8 +39,11 @@ def get_reminders(user: str):
     current_reminders = [reminder for reminder in decoded_reminders if
                          'time' in reminder and datetime.fromisoformat(reminder['time']).astimezone(timezone.utc) > now]
 
+    sorted_reminders = sorted(current_reminders,
+                              key=lambda r: datetime.fromisoformat(r['time']).astimezone(timezone.utc))
+
     reminder_texts = []
-    for reminder in current_reminders:
+    for idx, reminder in enumerate(sorted_reminders, start=1):
         if 'reminder' in reminder and 'time' in reminder and 'user_tz' in reminder:
             reminder_time_utc = datetime.fromisoformat(reminder['time'])
             user_timezone = pytz.timezone(reminder['user_tz'])
@@ -51,7 +54,7 @@ def get_reminders(user: str):
             offset_minutes = int((abs(utc_offset) * 60) % 60)
             offset_str = f"UTC {offset_sign}{offset_hours:02}:{offset_minutes:02}"
             reminder_text = (
-                f"{reminder['reminder']} at {reminder_time_local.strftime('%Y-%m-%d %H:%M')} "
+                f"{idx}. {reminder['reminder']} at {reminder_time_local.strftime('%Y-%m-%d %H:%M')} "
                 f"({reminder['user_tz']}, {offset_str})"
             )
             if 'id' in reminder:
@@ -100,3 +103,15 @@ def delete_all_reminders(user: str):
         redis_client.zrem("reminders", reminder_key)
         logger.info(f"Deleted reminder for user: {user} with key: {reminder_key}")
     return True
+
+
+def delete_reminder_by_index(user: str, index: int):
+    reminders = get_reminders(user)
+    if index < 1 or index > len(reminders):
+        logger.warning(f"Invalid index: {index} for user: {user}")
+        return False
+    reminder_text = reminders[index - 1]
+    reminder_id_start = reminder_text.rfind("[ID: ") + len("[ID: ")
+    reminder_id_end = reminder_text.rfind("]")
+    reminder_id = reminder_text[reminder_id_start:reminder_id_end]
+    return delete_reminder(user, reminder_id)
