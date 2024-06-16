@@ -1,6 +1,6 @@
 import uvicorn
 from fastapi import FastAPI
-from src.api.routers import twilio_webhook, home
+from src.api.routes import twilio_webhook, home
 
 app = FastAPI()
 app.include_router(twilio_webhook.router)
