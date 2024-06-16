@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request
 from src.utils.twilio_client import send_twilio_message
-from src.utils.reminder_service import schedule_reminder, get_reminders, delete_reminder, delete_reminder_by_index
+from src.utils.reminder_service import schedule_reminder, get_reminders, delete_reminder, delete_reminder_by_index, \
+    delete_all_reminders
 
 router = APIRouter()
 
@@ -60,7 +61,7 @@ async def twilio_webhook(request: Request):
             time_part = parts[1].strip()
             if "in" in time_part:
                 reminder_time_str, user_tz = time_part.split("in")
-                user_tz = user_tz.strip()
+                user_tz = user_tz.strip().title()
             else:
                 reminder_time_str = time_part.strip()
                 user_tz = 'Europe/Moscow'
