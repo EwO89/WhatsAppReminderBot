@@ -4,6 +4,9 @@ from src.utils.reminder_service import ReminderService, ReminderServiceDelete
 
 router = APIRouter()
 
+reminder_service = ReminderService()
+reminder_service_delete = ReminderServiceDelete()
+
 
 @router.post("/webhooks/twilio")
 async def twilio_webhook(request: Request):
@@ -27,7 +30,7 @@ async def twilio_webhook(request: Request):
         send_twilio_message(help_msg, from_number)
 
     elif body == "/list":
-        reminders = ReminderService.get_reminders(from_number)
+        reminders = reminder_service.get_reminders(from_number)
         reminders_text = "\n".join(reminders)
         if not reminders:
             reminders_text = "You have no reminders."
@@ -39,12 +42,12 @@ async def twilio_webhook(request: Request):
             identifier = identifier.strip()
             if identifier.isdigit():
                 index = int(identifier)
-                if ReminderServiceDelete.delete_reminder_by_index(from_number, index):
+                if reminder_service_delete.delete_reminder_by_index(from_number, index):
                     confirmation_msg = f"Deleted reminder with index {index}."
                 else:
                     confirmation_msg = f"Failed to delete reminder with index {index}."
             else:
-                if ReminderServiceDelete.delete_reminder(from_number, identifier):
+                if reminder_service_delete.delete_reminder(from_number, identifier):
                     confirmation_msg = f"Deleted reminder with ID {identifier}."
                 else:
                     confirmation_msg = f"Failed to delete reminder with ID {identifier}."
@@ -65,7 +68,7 @@ async def twilio_webhook(request: Request):
                 reminder_time_str = time_part.strip()
                 user_tz = 'Europe/Moscow'
             reminder_time_str = reminder_time_str.strip()
-            reminder_id = ReminderService.schedule_reminder(from_number, reminder_text, reminder_time_str, user_tz)
+            reminder_id = reminder_service.schedule_reminder(from_number, reminder_text, reminder_time_str, user_tz)
             confirmation_msg = f"Reminder set for '{reminder_text}' at {reminder_time_str} in {user_tz}."
             send_twilio_message(confirmation_msg, from_number)
         except Exception as e:

@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 import pytz
 import uuid
 from src.utils.redis_client import redis_client
+from src.utils.celery_client import send_reminder, celery_app
 
 logging.basicConfig(
     level=logging.INFO,
@@ -45,6 +46,7 @@ class ReminderStorage:
         for reminder_key in reminder_keys:
             redis_client.delete(reminder_key)
             redis_client.zrem("reminders", reminder_key)
+            celery_app.control.revoke(reminder_id, terminate=True)
             logger.info(f"Deleted reminder for user: {user} with ID: {reminder_id}")
         return True
 
@@ -55,8 +57,10 @@ class ReminderStorage:
             logger.warning(f"No reminders found for user: {user}")
             return False
         for reminder_key in reminder_keys:
+            reminder_id = reminder_key.decode().split(":")[-1]
             redis_client.delete(reminder_key)
             redis_client.zrem("reminders", reminder_key)
+            celery_app.control.revoke(reminder_id, terminate=True)
             logger.info(f"Deleted reminder for user: {user} with key: {reminder_key}")
         return True
 
@@ -117,7 +121,6 @@ class ReminderService(ReminderServiceBase):
         reminder_id = str(uuid.uuid4())
         ReminderStorage.save_reminder(user, reminder, reminder_time_utc, user_tz, reminder_id)
         delay = (reminder_time_utc - datetime.now(timezone.utc)).total_seconds()
-        from src.utils.celery_client import send_reminder
         send_reminder.apply_async((user, f"Reminder: {reminder}"), countdown=delay, task_id=reminder_id)
         logger.info(
             f"Scheduled reminder: {reminder} for user: {user} at time: {reminder_time_utc} with delay: {delay} seconds")
