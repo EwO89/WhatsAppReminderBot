@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 import pytz
 from src.utils.redis_client import redis_client
 
-
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -62,7 +61,7 @@ def get_reminders(user: str):
     return reminder_texts
 
 
-def schedule_reminder(user: str, reminder: str, reminder_time_str: str, user_tz: str):
+def schedule_reminder(user: str, reminder: str, reminder_time_str: str, user_tz: str = 'Europe/Moscow'):
     user_timezone = pytz.timezone(user_tz)
     reminder_time_local = datetime.strptime(reminder_time_str, '%Y-%m-%d %H:%M')
     reminder_time_utc = user_timezone.localize(reminder_time_local).astimezone(timezone.utc)
