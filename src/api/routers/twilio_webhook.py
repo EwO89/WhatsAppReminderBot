@@ -4,11 +4,10 @@ from datetime import datetime, timezone
 import logging
 from src.utils.twilio_client import send_twilio_message
 from src.utils.redis_client import save_reminder
-from src.utils.reminder_service import schedule_reminder
+from src.utils.celery_client import send_reminder
 
 router = APIRouter()
 
-# Настройка логирования
 logging.basicConfig(level=logging.INFO)
 
 reminder_pattern = re.compile(r'remind me to (.+) at (.+)', re.IGNORECASE)
@@ -30,10 +29,10 @@ async def receive_message(From: str = Form(...), Body: str = Form(...)):
 
             save_reminder(From, reminder_text, reminder_time_utc)
 
-            schedule_reminder(From, f"Reminder: {reminder_text}", reminder_time_utc)
+            delay = (reminder_time_utc - datetime.utcnow().replace(tzinfo=timezone.utc)).total_seconds()
+            send_reminder.apply_async((From, f"Reminder: {reminder_text}"), countdown=delay)
 
-            response_message = f"Got it! I'll remind you to '{reminder_text}' at {reminder_time_str}."
-            send_twilio_message(response_message, From)
+            send_twilio_message(f"Got it! I'll remind you to '{reminder_text}' at {reminder_time_str}.", From)
         except ValueError:
             logging.error("Failed to parse date and time")
             send_twilio_message("Sorry, I couldn't understand the time format. Please use 'YYYY-MM-DD HH:MM'.", From)

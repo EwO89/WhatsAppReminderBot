@@ -1,4 +1,3 @@
-from twilio.rest import Client
 from src.config.base import settings
 from src.utils import client
 

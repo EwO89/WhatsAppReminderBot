@@ -1,12 +1,24 @@
-from datetime import datetime
-from src.utils.celery_client import send_reminder
+from celery import Celery
+from twilio.rest import Client
+from src.config.base import settings
 import logging
+
+celery_app = Celery('tasks', broker=settings.CELERY_BROKER_URL, backend=settings.CELERY_RESULT_BACKEND)
+
+client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
 
 logging.basicConfig(level=logging.INFO)
 
-
-def schedule_reminder(to: str, message: str, reminder_time: datetime):
-    reminder_time_naive = reminder_time.replace(tzinfo=None)
-    delay = (reminder_time_naive - datetime.utcnow()).total_seconds()
-    logging.info(f"Scheduling reminder to {to} in {delay} seconds")
-    send_reminder.apply_async((to, message), countdown=delay)
+@celery_app.task(bind=True)
+def send_reminder(self, to: str, message: str):
+    logging.info(f"Task {self.request.id}: Sending reminder to {to}: {message}")
+    try:
+        client.messages.create(
+            body=message,
+            from_=settings.TWILIO_WHATSAPP_NUMBER,
+            to=to
+        )
+        logging.info(f"Task {self.request.id}: Reminder sent to {to}")
+    except Exception as e:
+        logging.error(f"Task {self.request.id}: Failed to send reminder to {to}: {e}")
+        self.retry(exc=e, countdown=60, max_retries=3)
